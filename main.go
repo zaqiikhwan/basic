@@ -885,7 +885,7 @@ func InitRouter() {
 		var queryResults []Scrape
 		trx := db
 		if isLocationExists {
-			trx = trx.Where("Location LIKE ?", "%"+location+"%")
+			trx = trx.Where("Location = ?", location)
 		}
 
 		if result := trx.Find(&queryResults); result.Error != nil {

@@ -66,7 +66,8 @@ type Scrape struct {
 	Name         string `gorm:"name" json:"name"`
 	Address      string `gorm:"address" json:"address"`
 	Phone_Number string `gorm:"phone_number" json:"phone_number"`
-	Website      string `gorm:"website" json:"website"`
+	// Website      string `gorm:"website" json:"website"`
+	Link_Google_Maps string `gorm:"link_google_maps" json:"link_google_maps"`
 }
 
 type Hospital struct {
@@ -801,16 +802,6 @@ func InitRouter() {
 		})
 	})
 
-	// var body searchClinic
-	// if err := c.BindJSON(&body); err != nil {
-	// 	c.JSON(http.StatusBadRequest, gin.H{
-	// 		"success": false,
-	// 		"message": "Location is invalid.",
-	// 		"error":   err.Error(),
-	// 	})
-	// 	return
-	//}
-
 	r.POST("/clinic", func(c *gin.Context) {
 		var body searchClinic
 		if err := c.BindJSON(&body); err != nil {
@@ -822,21 +813,7 @@ func InitRouter() {
 			return
 		}
 		var queryResults []Scrape
-
-		// if result := db.Where("Location LIKE ?", "%"+body.Location+"%"); result.Error != nil {
-		// 	c.JSON(http.StatusInternalServerError, gin.H{
-		// 		"success": false,
-		// 		"message": "Error when inserting into the database.",
-		// 		"error":   result.Error.Error(),
-		// 	})
-		// 	return
-		// }
-
 		trx := db
-		// if isLocationExists {
-		// 	trx = trx.Where("Location LIKE ?", "%"+location+"%")
-		// }
-
 		if result := trx.Where("Location = ?", body.Location).Find(&queryResults); result.Error != nil {
 			c.JSON(http.StatusBadRequest, gin.H{
 				"success": false,
@@ -844,13 +821,13 @@ func InitRouter() {
 				"error":   result.Error.Error(),
 			})
 			return
-		}
-
+		} 
 		c.JSON(http.StatusOK, gin.H{
 			"success": true,
 			"message": "Search successful",
 			"data":    queryResults,
 		})
+		
 	})
 
 	r.GET("/clinic", func(c *gin.Context) {

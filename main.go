@@ -99,19 +99,23 @@ type Article struct {
 	ID       uint   `gorm:"primarykey" json:"id"`
 	Title    string `json:"title"`
 	Content  string `json:"content"`
+	Image string `json:"image"`
 	Category string `json:"category"`
-	Link     string `json:"link"`
 }
 
-type postArticleBody struct {
-	Title    string `json:"title"`
-	Content  string `json:"content"`
-	Category string `json:"category"`
-	Link     string `json:"link"`
-}
+// type postArticleBody struct {
+// 	Title    string `json:"title"`
+// 	Content  string `json:"content"`
+// 	Category string `json:"category"`
+// 	Link     string `json:"link"`
+// }
 
 type searchClinic struct {
 	Location string
+}
+
+type searchArticle struct {
+	Category string
 }
 
 func StartServer() error {
@@ -127,7 +131,7 @@ func InitDB() error {
 		return err
 	}
 	db = _db
-	err = db.AutoMigrate(&Hospital{}, &User{}, &Doctor{}, &Article{})
+	err = db.AutoMigrate(&Hospital{}, &User{}, &Doctor{})
 	if err != nil {
 		return err
 	}
@@ -346,7 +350,12 @@ func InitRouter() {
 
 	r.GET("/user", AuthMiddleware(), func(c *gin.Context) {
 		id, _ := c.Get("id")
-		user := User{}
+		var body patchUserBody
+		user := User{
+			Name:     body.Name,
+			Email:    body.Email,
+			Username: body.Username,
+		}
 		if result := db.Where("id = ?", id).Take(&user); result.Error != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"success": false,
@@ -981,37 +990,32 @@ func InitRouter() {
 		})
 	})
 
-	r.POST("/article", func(c *gin.Context) {
-		var body postArticleBody
+	r.POST("/article/search", func(c *gin.Context) {
+		var body searchArticle
 		if err := c.BindJSON(&body); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{
 				"success": false,
-				"message": "Body is invalid.",
+				"message": "Category is invalid.",
 				"error":   err.Error(),
 			})
 			return
 		}
-		article := Article{
-			Title:    body.Title,
-			Content:  body.Content,
-			Category: body.Category,
-			Link:     body.Link,
-		}
-		if result := db.Create(&article); result.Error != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{
+		var queryResults []Article
+		trx := db
+		if result := trx.Where("Category = ?", body.Category).Find(&queryResults); result.Error != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
 				"success": false,
-				"message": "Error when inserting into the database.",
+				"message": "Query is not supplied.",
 				"error":   result.Error.Error(),
 			})
 			return
-		}
-		c.JSON(http.StatusCreated, gin.H{
+		} 
+		c.JSON(http.StatusOK, gin.H{
 			"success": true,
-			"message": "Article Posted successfully",
-			"data": gin.H{
-				"id": article.ID,
-			},
+			"message": "Search successful",
+			"data":    queryResults,
 		})
+		
 	})
 
 	r.GET("/article/search", func(c *gin.Context) {

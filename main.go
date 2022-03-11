@@ -24,7 +24,16 @@ type User struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
 	Username string `json:"username"`
+	BiodataArray string `json:"biodata_array"`
 }
+
+// type Biodata struct {
+// 	JenisHewan string `json:"jenis_hewan"`
+// 	Isi2 string `json:"isi_2"`
+// 	Isi3 string `json:"isi_3"`
+// 	Isi4 string `json:"isi_4"`
+// 	Isi5 string `json:"isi_5"`
+// }
 
 type Doctor struct {
 	ID       uint   `gorm:"primarykey" json:"id"`
@@ -47,13 +56,6 @@ type postLoginBody struct {
 }
 
 type patchUserBody struct {
-	Name     string `json:"name"`
-	Email    string `json:"email"`
-	Password string `json:"password"`
-	Username string `json:"username"`
-}
-
-type patchDoctorBody struct {
 	Name     string `json:"name"`
 	Email    string `json:"email"`
 	Password string `json:"password"`
@@ -99,7 +101,7 @@ func InitDB() error {
 		return err
 	}
 	db = _db
-	err = db.AutoMigrate(&User{}, &Doctor{})
+	err = db.AutoMigrate(&User{})
 	if err != nil {
 		return err
 	}
@@ -160,6 +162,23 @@ func AuthMiddleware() gin.HandlerFunc {
 }
 
 func InitRouter() {
+	// r.GET("/user/biodata", func(c *gin.Context) {
+	// 	user := User{}
+	// 	if result := db.Select("biodata_array").Take(&user); result.Error != nil {
+	// 		c.JSON(http.StatusInternalServerError, gin.H{
+	// 			"success": false,
+	// 			"message": "Error when querying the database.",
+	// 			"error":   result.Error.Error(),
+	// 		})
+	// 		return
+	// 	}
+	// 	c.JSON(http.StatusOK, gin.H{
+	// 		"success": true,
+	// 		"message": "Query successful",
+	// 		"data":   user,
+	// 	})
+	// })
+
 	r.POST("/user/register", func(c *gin.Context) {
 		var body postRegisterBody
 		if err := c.BindJSON(&body); err != nil {
@@ -189,39 +208,6 @@ func InitRouter() {
 			"message": "User Registered successfully",
 			"data": gin.H{
 				"id": user.ID,
-			},
-		})
-	})
-
-	r.POST("/doctor/register", func(c *gin.Context) {
-		var body postRegisterBody
-		if err := c.BindJSON(&body); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{
-				"success": false,
-				"message": "Body is invalid.",
-				"error":   err.Error(),
-			})
-			return
-		}
-		doctor := Doctor{
-			Name:     body.Name,
-			Email:    body.Email,
-			Password: body.Password,
-			Username: body.Username,
-		}
-		if result := db.Create(&doctor); result.Error != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"success": false,
-				"message": "Error when inserting into the database.",
-				"error":   result.Error.Error(),
-			})
-			return
-		}
-		c.JSON(http.StatusCreated, gin.H{
-			"success": true,
-			"message": "User Registered successfully",
-			"data": gin.H{
-				"id": doctor.ID,
 			},
 		})
 	})
@@ -278,65 +264,12 @@ func InitRouter() {
 			return
 		}
 	})
-
-	r.POST("/doctor/login", func(c *gin.Context) {
-		var body postLoginBody
-		if err := c.BindJSON(&body); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{
-				"success": false,
-				"message": "Body is invalid.",
-				"error":   err.Error(),
-			})
-			return
-		}
-		doctor := Doctor{}
-		if result := db.Where("email = ? ", body.Email).Take(&doctor); result.Error != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"success": false,
-				"message": "Error when querying the database.",
-				"error":   result.Error.Error(),
-			})
-			return
-		}
-		if doctor.Password == body.Password {
-			token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-				"id":  doctor.ID,
-				"exp": time.Now().Add(time.Hour * 24 * 7).Unix(),
-			})
-			tokenString, err := token.SignedString([]byte("passwordBuatSigning"))
-			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{
-					"success": false,
-					"message": "Error when generating the token.",
-					"error":   err.Error(),
-				})
-				return
-			}
-			c.JSON(http.StatusOK, gin.H{
-				"success": true,
-				"message": "Password is correct.",
-				"data": gin.H{
-					"id":       doctor.ID,
-					"name":     doctor.Name,
-					"username": doctor.Username,
-					"token":    tokenString,
-				},
-			})
-			return
-		} else {
-			c.JSON(http.StatusForbidden, gin.H{
-				"success": false,
-				"message": "Password is incorrect.",
-			})
-			return
-		}
-	})
-
+	
 	r.GET("/user", AuthMiddleware(), func(c *gin.Context) {
 		id, _ := c.Get("id")
 		user := User{}
 
-		if result := db.Where("id = ?", id).Take(&user); result.Error != nil {
+		if result := db.Where("id = ?", id).Select("name","email","username","id").Take(&user); result.Error != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"success": false,
 				"message": "Error when querying the database.",
@@ -348,24 +281,6 @@ func InitRouter() {
 			"success": true,
 			"message": "Query successful",
 			"data":   user,
-		})
-	})
-
-	r.GET("/doctor", AuthMiddleware(), func(c *gin.Context) {
-		id, _ := c.Get("id")
-		doctor := Doctor{}
-		if result := db.Where("id = ?", id).Take(&doctor); result.Error != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"success": false,
-				"message": "Error when querying the database.",
-				"error":   result.Error.Error(),
-			})
-			return
-		}
-		c.JSON(http.StatusOK, gin.H{
-			"success": true,
-			"message": "Query successful",
-			"data":    doctor,
 		})
 	})
 
@@ -391,31 +306,6 @@ func InitRouter() {
 			"success": true,
 			"message": "Query successful.",
 			"data":    user,
-		})
-	})
-
-	r.GET("/doctor/:id", func(c *gin.Context) {
-		id, isIdExists := c.Params.Get("id")
-		if !isIdExists {
-			c.JSON(http.StatusBadRequest, gin.H{
-				"success": false,
-				"message": "ID is not supplied.",
-			})
-			return
-		}
-		doctor := Doctor{}
-		if result := db.Where("id = ?", id).Take(&doctor); result.Error != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"success": false,
-				"message": "Error when querying the database.",
-				"error":   result.Error.Error(),
-			})
-			return
-		}
-		c.JSON(http.StatusOK, gin.H{
-			"success": true,
-			"message": "Query successful.",
-			"data":    doctor,
 		})
 	})
 
@@ -484,71 +374,6 @@ func InitRouter() {
 		})
 	})
 
-	r.PATCH("/doctor/:id", func(c *gin.Context) {
-		id, isIdExists := c.Params.Get("id")
-		if !isIdExists {
-			c.JSON(http.StatusBadRequest, gin.H{
-				"success": false,
-				"message": "ID is not supplied.",
-			})
-			return
-		}
-		var body patchDoctorBody
-		if err := c.BindJSON(&body); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{
-				"success": false,
-				"message": "Body is invalid.",
-				"error":   err.Error(),
-			})
-			return
-		}
-		parsedId, err := strconv.ParseUint(id, 10, 64)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{
-				"success": false,
-				"message": "ID is invalid.",
-				"error":   err.Error(),
-			})
-			return
-		}
-		doctor := Doctor{
-			ID:       uint(parsedId),
-			Name:     body.Name,
-			Email:    body.Email,
-			Password: body.Password,
-			Username: body.Username,
-		}
-		result := db.Model(&doctor).Updates(doctor)
-		if result.Error != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"success": false,
-				"message": "Error when updating the database.",
-				"error":   result.Error.Error(),
-			})
-			return
-		}
-		if result = db.Where("id = ?", parsedId).Take(&doctor); result.Error != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"success": false,
-				"message": "Error when querying the database.",
-				"error":   result.Error.Error(),
-			})
-			return
-		}
-		if result.RowsAffected < 1 {
-			c.JSON(http.StatusNotFound, gin.H{
-				"success": false,
-				"message": "User not found.",
-			})
-			return
-		}
-		c.JSON(http.StatusOK, gin.H{
-			"success": true,
-			"message": "Update successful.",
-			"data":    doctor,
-		})
-	})
-
 	r.GET("/user/search", func(c *gin.Context) {
 		name, isNameExists := c.GetQuery("name")
 		email, isEmailExists := c.GetQuery("email")
@@ -562,53 +387,6 @@ func InitRouter() {
 		}
 
 		var queryResults []User
-		trx := db
-		if isNameExists {
-			trx = trx.Where("name LIKE ?", "%"+name+"%")
-		}
-		if isEmailExists {
-			trx = trx.Where("email LIKE ?", "%"+email+"%")
-		}
-		if isUsernameExists {
-			trx = trx.Where("username LIKE ?", "%"+username+"%")
-		}
-
-		if result := trx.Find(&queryResults); result.Error != nil {
-			c.JSON(http.StatusBadRequest, gin.H{
-				"success": false,
-				"message": "Query is not supplied.",
-				"error":   result.Error.Error(),
-			})
-			return
-		}
-
-		c.JSON(http.StatusOK, gin.H{
-			"success": true,
-			"message": "Search successful",
-			"data": gin.H{
-				"query": gin.H{
-					"name":     name,
-					"email":    email,
-					"username": username,
-				},
-				"result": queryResults,
-			},
-		})
-	})
-
-	r.GET("/doctor/search", func(c *gin.Context) {
-		name, isNameExists := c.GetQuery("name")
-		email, isEmailExists := c.GetQuery("email")
-		username, isUsernameExists := c.GetQuery("username")
-		if !isNameExists && !isEmailExists && !isUsernameExists {
-			c.JSON(http.StatusBadRequest, gin.H{
-				"success": false,
-				"message": "Query is not supplied.",
-			})
-			return
-		}
-
-		var queryResults []Doctor
 		trx := db
 		if isNameExists {
 			trx = trx.Where("name LIKE ?", "%"+name+"%")

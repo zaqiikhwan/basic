@@ -171,23 +171,6 @@ func AuthMiddleware() gin.HandlerFunc {
 }
 
 func InitRouter() {
-	// r.GET("/user/biodata", func(c *gin.Context) {
-	// 	user := User{}
-	// 	if result := db.Select("biodata_array").Take(&user); result.Error != nil {
-	// 		c.JSON(http.StatusInternalServerError, gin.H{
-	// 			"success": false,
-	// 			"message": "Error when querying the database.",
-	// 			"error":   result.Error.Error(),
-	// 		})
-	// 		return
-	// 	}
-	// 	c.JSON(http.StatusOK, gin.H{
-	// 		"success": true,
-	// 		"message": "Query successful",
-	// 		"data":   user,
-	// 	})
-	// })
-
 	r.POST("/user/register", func(c *gin.Context) {
 		var body postRegisterBody
 		if err := c.BindJSON(&body); err != nil {

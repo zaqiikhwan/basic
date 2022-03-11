@@ -115,6 +115,7 @@ type searchClinic struct {
 }
 
 type searchArticle struct {
+	ID uint
 	Category string
 }
 
@@ -366,12 +367,8 @@ func InitRouter() {
 
 	r.GET("/user", AuthMiddleware(), func(c *gin.Context) {
 		id, _ := c.Get("id")
-		var body patchUserBody
-		user := User{
-			Name:     body.Name,
-			Email:    body.Email,
-			Username: body.Username,
-		}
+		user := User{}
+
 		if result := db.Where("id = ?", id).Take(&user); result.Error != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"success": false,
@@ -383,7 +380,7 @@ func InitRouter() {
 		c.JSON(http.StatusOK, gin.H{
 			"success": true,
 			"message": "Query successful",
-			"data":    user,
+			"data":   user,
 		})
 	})
 
@@ -1006,7 +1003,54 @@ func InitRouter() {
 		})
 	})
 
+	r.GET("/article", func(c *gin.Context) {
+		var queryResults []Article
+		trx := db
+		if result := trx.Find(&queryResults); result.Error != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"success": false,
+				"message": "Query is not supplied.",
+				"error":   result.Error.Error(),
+			})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{
+			"success": true,
+			"message": "Search successful",
+			"data":    queryResults,
+		})
+	})
+
 	r.POST("/article/search", func(c *gin.Context) {
+		var body searchArticle
+		if err := c.BindJSON(&body); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"success": false,
+				"message": "Category is invalid.",
+				"error":   err.Error(),
+			})
+			return
+		}
+		var queryResults []Article
+		trx := db
+		if result := trx.Where("ID = ?", body.ID).Find(&queryResults); result.Error != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"success": false,
+				"message": "Query is not supplied.",
+				"error":   result.Error.Error(),
+			})
+			return
+		} 
+		c.JSON(http.StatusOK, gin.H{
+			"success": true,
+			"message": "Search successful",
+			"data":    queryResults,
+		})
+		
+	})
+
+	r.POST("/article/category", func(c *gin.Context) {
 		var body searchArticle
 		if err := c.BindJSON(&body); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{

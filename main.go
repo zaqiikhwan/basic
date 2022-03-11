@@ -66,33 +66,7 @@ type Scrape struct {
 	Name         string `gorm:"name" json:"name"`
 	Address      string `gorm:"address" json:"address"`
 	Phone_Number string `gorm:"phone_number" json:"phone_number"`
-	// Website      string `gorm:"website" json:"website"`
 	Link_Google_Maps string `gorm:"link_google_maps" json:"link_google_maps"`
-}
-
-type Hospital struct {
-	ID           uint   `gorm:"primarykey" json:"id"`
-	NameCity     string `json:"name_city"`
-	HospitalName string `json:"hospital_name"`
-	Contact      string `json:"contact"`
-	Address      string `json:"address"`
-	Link         string `json:"link"`
-}
-
-type postHospitalBody struct {
-	NameCity     string `json:"name_city"`
-	HospitalName string `json:"hospital_name"`
-	Contact      string `json:"contact"`
-	Address      string `json:"address"`
-	Link         string `json:"link"`
-}
-
-type patchHospitalBody struct {
-	NameCity     string `json:"name_city"`
-	HospitalName string `json:"hospital_name"`
-	Contact      string `json:"contact"`
-	Address      string `json:"address"`
-	Link         string `json:"link"`
 }
 
 type Article struct {
@@ -102,13 +76,6 @@ type Article struct {
 	Image string `json:"image"`
 	Category string `json:"category"`
 }
-
-// type postArticleBody struct {
-// 	Title    string `json:"title"`
-// 	Content  string `json:"content"`
-// 	Category string `json:"category"`
-// 	Link     string `json:"link"`
-// }
 
 type searchClinic struct {
 	Location string
@@ -132,7 +99,7 @@ func InitDB() error {
 		return err
 	}
 	db = _db
-	err = db.AutoMigrate(&Hospital{}, &User{}, &Doctor{})
+	err = db.AutoMigrate(&User{}, &Doctor{})
 	if err != nil {
 		return err
 	}
@@ -744,86 +711,6 @@ func InitRouter() {
 		})
 	})
 
-	r.POST("/hospital/register", func(c *gin.Context) {
-		var body postHospitalBody
-		if err := c.BindJSON(&body); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{
-				"success": false,
-				"message": "Body is invalid.",
-				"error":   err.Error(),
-			})
-			return
-		}
-		hospital := Hospital{
-			NameCity:     body.NameCity,
-			HospitalName: body.HospitalName,
-			Contact:      body.Contact,
-			Address:      body.Address,
-			Link:         body.Link,
-		}
-		if result := db.Create(&hospital); result.Error != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"success": false,
-				"message": "Error when inserting into the database.",
-				"error":   result.Error.Error(),
-			})
-			return
-		}
-		c.JSON(http.StatusCreated, gin.H{
-			"success": true,
-			"message": "Hospital registered successfully.",
-			"data": gin.H{
-				"id": hospital.ID,
-			},
-		})
-	})
-
-	r.GET("/hospital/:id", func(c *gin.Context) {
-		id, isIdExists := c.Params.Get("id")
-		if !isIdExists {
-			c.JSON(http.StatusBadRequest, gin.H{
-				"success": false,
-				"message": "ID is not supplied.",
-			})
-			return
-		}
-		hospital := Hospital{}
-		if result := db.Where("id = ?", id).Take(&hospital); result.Error != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"success": false,
-				"message": "Error when querying the database.",
-				"error":   result.Error.Error(),
-			})
-			return
-		}
-		c.JSON(http.StatusOK, gin.H{
-			"success": true,
-			"message": "Query successful.",
-			"data":    hospital,
-		})
-	})
-
-	r.GET("/hospital", func(c *gin.Context) {
-		var queryResults []Hospital
-		trx := db
-		if result := trx.Find(&queryResults); result.Error != nil {
-			c.JSON(http.StatusBadRequest, gin.H{
-				"success": false,
-				"message": "Query is not supplied.",
-				"error":   result.Error.Error(),
-			})
-			return
-		}
-
-		c.JSON(http.StatusOK, gin.H{
-			"success": true,
-			"message": "Search successful",
-			"data": gin.H{
-				"result": queryResults,
-			},
-		})
-	})
-
 	r.POST("/clinic", func(c *gin.Context) {
 		var body searchClinic
 		if err := c.BindJSON(&body); err != nil {
@@ -903,106 +790,6 @@ func InitRouter() {
 		})
 	})
 
-	r.GET("/hospital/search", func(c *gin.Context) {
-		namakota, isNamaKotaExists := c.GetQuery("name_city")
-		if !isNamaKotaExists {
-			c.JSON(http.StatusBadRequest, gin.H{
-				"success": false,
-				"message": "Query is not supplied.",
-			})
-			return
-		}
-
-		var queryResults []Hospital
-		trx := db
-		if isNamaKotaExists {
-			trx = trx.Where("name_city LIKE ?", "%"+namakota+"%")
-		}
-
-		if result := trx.Find(&queryResults); result.Error != nil {
-			c.JSON(http.StatusBadRequest, gin.H{
-				"success": false,
-				"message": "Query is not supplied.",
-				"error":   result.Error.Error(),
-			})
-			return
-		}
-
-		c.JSON(http.StatusOK, gin.H{
-			"success": true,
-			"message": "Search successful",
-			"data": gin.H{
-				"result": queryResults,
-			},
-		})
-	})
-
-	r.PATCH("/hospital/:id", func(c *gin.Context) {
-		id, isIdExists := c.Params.Get("id")
-		if !isIdExists {
-			c.JSON(http.StatusBadRequest, gin.H{
-				"success": false,
-				"message": "ID is not supplied.",
-			})
-			return
-		}
-		var body patchHospitalBody
-		if err := c.BindJSON(&body); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{
-				"success": false,
-				"message": "Body is invalid.",
-				"error":   err.Error(),
-			})
-			return
-		}
-		parsedId, err := strconv.ParseUint(id, 10, 64)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{
-				"success": false,
-				"message": "ID is invalid.",
-				"error":   err.Error(),
-			})
-			return
-		}
-		hospital := Hospital{
-			ID:           uint(parsedId),
-			NameCity:     body.NameCity,
-			HospitalName: body.HospitalName,
-			Contact:      body.Contact,
-			Address:      body.Address,
-			Link:         body.Link,
-		}
-		result := db.Model(&hospital).Updates(hospital)
-		if result.Error != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"success": false,
-				"message": "Error when updating the database.",
-				"error":   result.Error.Error(),
-			})
-			return
-		}
-		if result = db.Where("id = ?", parsedId).Take(&hospital); result.Error != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"success": false,
-				"message": "Error when querying the database.",
-				"error":   result.Error.Error(),
-			})
-			return
-		}
-		if result.RowsAffected < 1 {
-			c.JSON(http.StatusNotFound, gin.H{
-				"success": false,
-				"message": "Hospital not found.",
-			})
-			return
-		}
-		c.JSON(http.StatusCreated, gin.H{
-			"success": true,
-			"message": "Update successful.",
-			"data":    hospital,
-		})
-	})
-
 	r.GET("/article", func(c *gin.Context) {
 		var queryResults []Article
 		trx := db
@@ -1076,34 +863,6 @@ func InitRouter() {
 			"data":    queryResults,
 		})
 		
-	})
-
-	r.GET("/article/search", func(c *gin.Context) {
-		title, isTitleExists := c.GetQuery("title")
-		category, isCategoryExists := c.GetQuery("category")
-		var queryResults []Article
-		trx := db
-		if isTitleExists {
-			trx = trx.Where("title LIKE ?", "%"+title+"%")
-		}
-		if isCategoryExists {
-			trx = trx.Where("category LIKE ?", "%"+category+"%")
-		}
-
-		if result := trx.Find(&queryResults); result.Error != nil {
-			c.JSON(http.StatusBadRequest, gin.H{
-				"success": false,
-				"message": "Query is not supplied.",
-				"error":   result.Error.Error(),
-			})
-			return
-		}
-
-		c.JSON(http.StatusOK, gin.H{
-			"success": true,
-			"message": "Search successful",
-			"data":    queryResults,
-		})
 	})
 }
 

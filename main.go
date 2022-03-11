@@ -24,17 +24,26 @@ type User struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
 	Username string `json:"username"`
-	BiodataArray string `json:"biodata_array"`
+	Biodata Biodata `json:"biodata"`
+	BiodataID uint 
 }
 
-// type Biodata struct {
-// 	JenisHewan string `json:"jenis_hewan"`
-// 	Isi2 string `json:"isi_2"`
-// 	Isi3 string `json:"isi_3"`
-// 	Isi4 string `json:"isi_4"`
-// 	Isi5 string `json:"isi_5"`
-// }
+type Biodata struct {
+	ID uint `gorm:"primarykey" json:"id"`
+	JenisHewan string `json:"jenis_hewan"`
+	Isi2 string `json:"isi_2"`
+	Isi3 string `json:"isi_3"`
+	Isi4 string `json:"isi_4"`
+	Isi5 string `json:"isi_5"`
+}
 
+type postBiodataBody struct {
+	JenisHewan string `json:"jenis_hewan"`
+	Isi2 string `json:"isi_2"`
+	Isi3 string `json:"isi_3"`
+	Isi4 string `json:"isi_4"`
+	Isi5 string `json:"isi_5"`
+}
 type Doctor struct {
 	ID       uint   `gorm:"primarykey" json:"id"`
 	Name     string `json:"name"`
@@ -101,7 +110,7 @@ func InitDB() error {
 		return err
 	}
 	db = _db
-	err = db.AutoMigrate(&User{})
+	err = db.AutoMigrate(&User{}, &Biodata{})
 	if err != nil {
 		return err
 	}
@@ -205,7 +214,7 @@ func InitRouter() {
 		}
 		c.JSON(http.StatusCreated, gin.H{
 			"success": true,
-			"message": "User Registered successfully",
+			"message": "User Registered Successfully",
 			"data": gin.H{
 				"id": user.ID,
 			},
@@ -268,8 +277,25 @@ func InitRouter() {
 	r.GET("/user", AuthMiddleware(), func(c *gin.Context) {
 		id, _ := c.Get("id")
 		user := User{}
+		if result := db.Where("id = ?", id).Preload("Biodata").Take(&user); result.Error != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"success": false,
+				"message": "Error when querying the database.",
+				"error":   result.Error.Error(),
+			})
+			return
+		}
+		user.Password = "";
+		c.JSON(http.StatusOK, gin.H{
+			"success": true,
+			"message": "Query successful",
+			"data":   user,
+		})
+	})
 
-		if result := db.Where("id = ?", id).Select("name","email","username","id").Take(&user); result.Error != nil {
+	r.GET("/doctor", AuthMiddleware(), func(c *gin.Context) {
+		var doctors []Doctor
+		if result := db.Find(&doctors); result.Error != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"success": false,
 				"message": "Error when querying the database.",
@@ -280,7 +306,7 @@ func InitRouter() {
 		c.JSON(http.StatusOK, gin.H{
 			"success": true,
 			"message": "Query successful",
-			"data":   user,
+			"data":    doctors,
 		})
 	})
 
@@ -609,6 +635,47 @@ func InitRouter() {
 			"data":    queryResults,
 		})
 		
+	})
+
+	r.POST("/biodata", AuthMiddleware(), func(c *gin.Context) {
+		var body postBiodataBody
+		if err := c.BindJSON(&body); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"success": false,
+				"message": "Body is invalid.",
+				"error":   err.Error(),
+			})
+			return
+		}
+		id, _ := c.Get("id")
+		biodata := Biodata{
+			JenisHewan: body.JenisHewan,
+			Isi2: body.Isi2,
+			Isi3: body.Isi3,
+			Isi4: body.Isi4,
+			Isi5: body.Isi5,
+		}
+		if result := db.Create(&biodata); result.Error != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"success": false,
+				"message": "Error when inserting into the database.",
+				"error":   result.Error.Error(),
+			})
+			return
+		}
+		if result := db.Model(&User{}).Where("id = ?", id).Update("biodata_id", biodata.ID);  result.Error != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"success": false,
+				"message": "Error when inserting into the database.",
+				"error":   result.Error.Error(),
+			})
+			return
+		}
+		c.JSON(http.StatusCreated, gin.H{
+			"success": true,
+			"message": "Biodata Created Successfully",
+			"data": biodata,
+		})
 	})
 }
 

@@ -711,7 +711,26 @@ func InitRouter() {
 		})
 	})
 
-	r.POST("/clinic", func(c *gin.Context) {
+	r.GET("/clinic", func(c *gin.Context) {
+		var queryResults []Scrape
+		trx := db
+		if result := trx.Find(&queryResults); result.Error != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"success": false,
+				"message": "Query is not supplied.",
+				"error":   result.Error.Error(),
+			})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{
+			"success": true,
+			"message": "Search successful",
+			"data":    queryResults,
+		})
+	})
+
+	r.POST("/clinic/search", func(c *gin.Context) {
 		var body searchClinic
 		if err := c.BindJSON(&body); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{
@@ -737,57 +756,6 @@ func InitRouter() {
 			"data":    queryResults,
 		})
 		
-	})
-
-	r.GET("/clinic", func(c *gin.Context) {
-		var queryResults []Scrape
-		trx := db
-		if result := trx.Find(&queryResults); result.Error != nil {
-			c.JSON(http.StatusBadRequest, gin.H{
-				"success": false,
-				"message": "Query is not supplied.",
-				"error":   result.Error.Error(),
-			})
-			return
-		}
-
-		c.JSON(http.StatusOK, gin.H{
-			"success": true,
-			"message": "Search successful",
-			"data":    queryResults,
-		})
-	})
-
-	r.GET("/clinic/search", func(c *gin.Context) {
-		location, isLocationExists := c.GetQuery("Location")
-		if !isLocationExists {
-			c.JSON(http.StatusBadRequest, gin.H{
-				"success": false,
-				"message": "Query is not supplied.",
-			})
-			return
-		}
-
-		var queryResults []Scrape
-		trx := db
-		if isLocationExists {
-			trx = trx.Where("Location = ?", location)
-		}
-
-		if result := trx.Find(&queryResults); result.Error != nil {
-			c.JSON(http.StatusBadRequest, gin.H{
-				"success": false,
-				"message": "Query is not supplied.",
-				"error":   result.Error.Error(),
-			})
-			return
-		}
-
-		c.JSON(http.StatusOK, gin.H{
-			"success": true,
-			"message": "Search successful",
-			"data":    queryResults,
-		})
 	})
 
 	r.GET("/article", func(c *gin.Context) {

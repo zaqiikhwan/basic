@@ -42,10 +42,15 @@ type Doctor struct {
 	ID       uint   `gorm:"primarykey" json:"id"`
 	Name     string `json:"name"`
 	Email    string `json:"email"`
-	Password string `json:"password"`
-	Username string `json:"username"`
+	Jadwal string `json:"jadwal"`
+	Lokasi_Kerja string `gorm:"lokasi_kerja" json:"lokasi_kerja"`
+	Meet string `gorm:"meet" json:"meet"`
+	Picture string `gorm:"picture" json:"picture"`
 }
 
+type selectDoctor struct {
+	ID uint
+}
 type postRegisterBody struct {
 	Name     string `json:"name"`
 	Email    string `json:"email"`
@@ -92,7 +97,7 @@ type searchArticle struct {
 }
 
 func StartServer() error {
-	return r.Run()
+	return r.Run(":5000")
 }
 
 var db *gorm.DB
@@ -270,7 +275,7 @@ func InitRouter() {
 		})
 	})
 
-	r.GET("/doctor", AuthMiddleware(), func(c *gin.Context) {
+	r.GET("/doctor", func(c *gin.Context) {
 		var doctors []Doctor
 		if result := db.Find(&doctors); result.Error != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
@@ -583,7 +588,6 @@ func InitRouter() {
 			"message": "Search successful",
 			"data":    queryResults,
 		})
-		
 	})
 
 	r.POST("/article/category", func(c *gin.Context) {
@@ -652,6 +656,33 @@ func InitRouter() {
 			"success": true,
 			"message": "Biodata Created Successfully",
 			"data": biodata,
+		})
+	})
+
+	r.POST("/doctor/search", func(c *gin.Context) {
+		var body selectDoctor
+		if err := c.BindJSON(&body); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"success": false,
+				"message": "Category is invalid.",
+				"error":   err.Error(),
+			})
+			return
+		}
+		var queryResults []Doctor
+		trx := db
+		if result := trx.Where("ID = ?", body.ID).Find(&queryResults); result.Error != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"success": false,
+				"message": "Query is not supplied.",
+				"error":   result.Error.Error(),
+			})
+			return
+		} 
+		c.JSON(http.StatusOK, gin.H{
+			"success": true,
+			"message": "Search successful",
+			"data":    queryResults,
 		})
 	})
 }

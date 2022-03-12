@@ -1,16 +1,10 @@
 package main
 
 import (
-	// "database/sql"
 	"fmt"
 	"net/http"
 	"strconv"
 	"time"
-
-	// "strconv"
-	// "time"
-
-	// "github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v4"
 	"gorm.io/driver/mysql"

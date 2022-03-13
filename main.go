@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strconv"
 	"time"
+
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v4"
 	"gorm.io/driver/mysql"
@@ -14,38 +15,40 @@ import (
 type User struct {
 	ID uint `gorm:"primarykey" json:"id"`
 	// gorm.Model
-	Name     string `json:"name"`
-	Email    string `json:"email"`
-	Password string `json:"password"`
-	Username string `json:"username"`
-	Biodata Biodata `json:"biodata"`
-	BiodataID uint 
+	Name      string  `json:"name"`
+	Email     string  `json:"email"`
+	Password  string  `json:"password"`
+	Username  string  `json:"username"`
+	Biodata   Biodata `json:"biodata"`
+	BiodataID uint
 }
 
 type Biodata struct {
-	ID uint `gorm:"primarykey" json:"id"`
-	JenisHewan string `json:"jenis_hewan"`
-	Isi2 string `json:"isi_2"`
-	Isi3 string `json:"isi_3"`
-	Isi4 string `json:"isi_4"`
-	Isi5 string `json:"isi_5"`
+	ID            uint   `gorm:"primarykey" json:"id"`
+	Nama_Hewan    string `json:"nama_hewan"`
+	Umur_Hewan    string `json:"umur_hewan"`
+	Jenis_Kelamin string `json:"jenis_kelamin"`
+	Jenis_Hewan   string `json:"jenis_hewan"`
+	Warna_Hewan   string `json:"warna_hewan"`
 }
 
 type postBiodataBody struct {
-	JenisHewan string `json:"jenis_hewan"`
-	Isi2 string `json:"isi_2"`
-	Isi3 string `json:"isi_3"`
-	Isi4 string `json:"isi_4"`
-	Isi5 string `json:"isi_5"`
+	Nama_Hewan    string `json:"nama_hewan"`
+	Umur_Hewan    string `json:"umur_hewan"`
+	Jenis_Kelamin string `json:"jenis_kelamin"`
+	Jenis_Hewan   string `json:"jenis_hewan"`
+	Warna_Hewan   string `json:"warna_hewan"`
 }
 type Doctor struct {
-	ID       uint   `gorm:"primarykey" json:"id"`
-	Name     string `json:"name"`
-	Email    string `json:"email"`
-	Jadwal string `json:"jadwal"`
+	ID           uint   `gorm:"primarykey" json:"id"`
+	Name         string `json:"name"`
+	Email        string `json:"email"`
+	Jadwal       string `json:"jadwal"`
 	Lokasi_Kerja string `gorm:"lokasi_kerja" json:"lokasi_kerja"`
-	Meet string `gorm:"meet" json:"meet"`
-	Picture string `gorm:"picture" json:"picture"`
+	Meet         string `gorm:"meet" json:"meet"`
+	Picture      string `gorm:"picture" json:"picture"`
+	Pengalaman   uint   `gorm:"lama_pengalaman" json:"pengalaman"`
+	Price        string `gorm:"price" json:"price"`
 }
 
 type selectDoctor struct {
@@ -71,11 +74,11 @@ type patchUserBody struct {
 }
 
 type Scrape struct {
-	ID           uint   `gorm:"primarykey" json:"id"`
-	Location     string `gorm:"location" json:"location"`
-	Name         string `gorm:"name" json:"name"`
-	Address      string `gorm:"address" json:"address"`
-	Phone_Number string `gorm:"phone_number" json:"phone_number"`
+	ID               uint   `gorm:"primarykey" json:"id"`
+	Location         string `gorm:"location" json:"location"`
+	Name             string `gorm:"name" json:"name"`
+	Address          string `gorm:"address" json:"address"`
+	Phone_Number     string `gorm:"phone_number" json:"phone_number"`
 	Link_Google_Maps string `gorm:"link_google_maps" json:"link_google_maps"`
 }
 
@@ -83,8 +86,22 @@ type Article struct {
 	ID       uint   `gorm:"primarykey" json:"id"`
 	Title    string `json:"title"`
 	Content  string `json:"content"`
-	Image string `json:"image"`
+	Image    string `json:"image"`
 	Category string `json:"category"`
+}
+
+type Transaction struct {
+	ID                uint   `gorm:"primarykey" json:"id"`
+	Tanggal_Pemesanan string `gorm:"tanggal_pemesanan" json:"tgl_pesan"`
+	Jam_Konsultasi    string `gorm:"jam_konsultasi" json:"jam_konsultasi"`
+	Bukti_Pembayaran  string `gorm:"bukti_pembayaran" json:"bukti_pembayaran"`
+	// Doctor Doctor
+	// DoctorID uint
+}
+
+type postTransactionBody struct {
+	Tanggal_Pemesanan string `gorm:"tanggal_pemesanan" json:"tgl_pesan"`
+	Jam_Konsultasi    string `gorm:"jam_konsultasi" json:"jam_konsultasi"`
 }
 
 type searchClinic struct {
@@ -92,12 +109,12 @@ type searchClinic struct {
 }
 
 type searchArticle struct {
-	ID uint
+	ID       uint
 	Category string
 }
 
 func StartServer() error {
-	return r.Run(":5000")
+	return r.Run()
 }
 
 var db *gorm.DB
@@ -109,10 +126,11 @@ func InitDB() error {
 		return err
 	}
 	db = _db
-	err = db.AutoMigrate(&User{}, &Biodata{})
+	err = db.AutoMigrate(&User{}, &Biodata{}, &Doctor{}, &Transaction{})
 	if err != nil {
 		return err
 	}
+	db.Exec("INSERT INTO biodata (id) VALUES (?)", 1)
 	return nil
 }
 
@@ -181,10 +199,11 @@ func InitRouter() {
 			return
 		}
 		user := User{
-			Name:     body.Name,
-			Email:    body.Email,
-			Password: body.Password,
-			Username: body.Username,
+			Name:      body.Name,
+			Email:     body.Email,
+			Password:  body.Password,
+			Username:  body.Username,
+			BiodataID: 1,
 		}
 		if result := db.Create(&user); result.Error != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
@@ -255,7 +274,7 @@ func InitRouter() {
 			return
 		}
 	})
-	
+
 	r.GET("/user", AuthMiddleware(), func(c *gin.Context) {
 		id, _ := c.Get("id")
 		user := User{}
@@ -267,11 +286,11 @@ func InitRouter() {
 			})
 			return
 		}
-		user.Password = "";
+		user.Password = ""
 		c.JSON(http.StatusOK, gin.H{
 			"success": true,
 			"message": "Query successful",
-			"data":   user,
+			"data":    user,
 		})
 	})
 
@@ -535,13 +554,13 @@ func InitRouter() {
 				"error":   result.Error.Error(),
 			})
 			return
-		} 
+		}
 		c.JSON(http.StatusOK, gin.H{
 			"success": true,
 			"message": "Search successful",
 			"data":    queryResults,
 		})
-		
+
 	})
 
 	r.GET("/article", func(c *gin.Context) {
@@ -582,7 +601,7 @@ func InitRouter() {
 				"error":   result.Error.Error(),
 			})
 			return
-		} 
+		}
 		c.JSON(http.StatusOK, gin.H{
 			"success": true,
 			"message": "Search successful",
@@ -609,16 +628,16 @@ func InitRouter() {
 				"error":   result.Error.Error(),
 			})
 			return
-		} 
+		}
 		c.JSON(http.StatusOK, gin.H{
 			"success": true,
 			"message": "Search successful",
 			"data":    queryResults,
 		})
-		
+
 	})
 
-	r.POST("/biodata", AuthMiddleware(), func(c *gin.Context) {
+	r.POST("/biodata", func(c *gin.Context) {
 		var body postBiodataBody
 		if err := c.BindJSON(&body); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{
@@ -630,11 +649,11 @@ func InitRouter() {
 		}
 		id, _ := c.Get("id")
 		biodata := Biodata{
-			JenisHewan: body.JenisHewan,
-			Isi2: body.Isi2,
-			Isi3: body.Isi3,
-			Isi4: body.Isi4,
-			Isi5: body.Isi5,
+			Nama_Hewan:    body.Nama_Hewan,
+			Umur_Hewan:    body.Umur_Hewan,
+			Jenis_Kelamin: body.Jenis_Kelamin,
+			Jenis_Hewan:   body.Jenis_Hewan,
+			Warna_Hewan:   body.Warna_Hewan,
 		}
 		if result := db.Create(&biodata); result.Error != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
@@ -644,7 +663,7 @@ func InitRouter() {
 			})
 			return
 		}
-		if result := db.Model(&User{}).Where("id = ?", id).Update("biodata_id", biodata.ID);  result.Error != nil {
+		if result := db.Model(&User{}).Where("id = ?", id).Update("biodata_id", biodata.ID); result.Error != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"success": false,
 				"message": "Error when inserting into the database.",
@@ -655,7 +674,7 @@ func InitRouter() {
 		c.JSON(http.StatusCreated, gin.H{
 			"success": true,
 			"message": "Biodata Created Successfully",
-			"data": biodata,
+			"data":    biodata,
 		})
 	})
 
@@ -678,13 +697,92 @@ func InitRouter() {
 				"error":   result.Error.Error(),
 			})
 			return
-		} 
+		}
 		c.JSON(http.StatusOK, gin.H{
 			"success": true,
 			"message": "Search successful",
 			"data":    queryResults,
 		})
 	})
+
+	r.Static("/assets", "./assets")
+	r.POST("/upload", AuthMiddleware(), func(c *gin.Context) {
+		//Upload file
+		file, err := c.FormFile("file")
+		if err != nil {
+			c.JSON(http.StatusBadRequest, fmt.Sprintf("get form err: %s", err.Error()))
+			return
+		}
+		if err := c.SaveUploadedFile(file, "./assets/"+file.Filename); err != nil {
+			c.JSON(http.StatusBadRequest, fmt.Sprintf("upload file err: %s", err.Error()))
+			return
+		}
+		c.JSON(http.StatusOK, fmt.Sprintf("File %s uploaded successfully", "./assets/"+file.Filename))
+	})
+
+	r.POST("/order/date", AuthMiddleware(), func(c *gin.Context) {
+		var body postTransactionBody
+		if err := c.BindJSON(&body); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"success": false,
+				"message": "Location is invalid.",
+				"error":   err.Error(),
+			})
+			return
+		}
+		fmt.Println(body.Tanggal_Pemesanan)
+		transaction := Transaction{
+			Tanggal_Pemesanan: body.Tanggal_Pemesanan,
+		}
+		if result := db.Create(&transaction); result.Error != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"success": false,
+				"message": "Error when inserting into the database.",
+				"error":   result.Error.Error(),
+			})
+			return
+		}
+		c.JSON(http.StatusCreated, gin.H{
+			"success": true,
+			"message": "Date Registered Successfully",
+			"data": gin.H{
+				"tanggal": transaction.Tanggal_Pemesanan,
+			},
+		})
+
+	})
+
+	r.POST("/order/time", AuthMiddleware(), func(c *gin.Context) {
+		var body postTransactionBody
+		if err := c.BindJSON(&body); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"success": false,
+				"message": "Location is invalid.",
+				"error":   err.Error(),
+			})
+			return
+		}
+		transaction := Transaction{
+			Jam_Konsultasi: body.Jam_Konsultasi,
+		}
+		if result := db.Create(&transaction); result.Error != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"success": false,
+				"message": "Error when inserting into the database.",
+				"error":   result.Error.Error(),
+			})
+			return
+		}
+		c.JSON(http.StatusCreated, gin.H{
+			"success": true,
+			"message": "Time Registered Successfully",
+			"data": gin.H{
+				"jam": transaction.Jam_Konsultasi,
+			},
+		})
+
+	})
+
 }
 
 func main() {

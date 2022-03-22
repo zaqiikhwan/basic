@@ -1,10 +1,12 @@
 package main
 
 import (
+	"main.go/authmiddleware"
 	"fmt"
 	"net/http"
 	"strconv"
 	"time"
+	
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v4"
@@ -16,6 +18,7 @@ type User struct {
 	ID uint `gorm:"primarykey" json:"id"`
 	// gorm.Model
 	Name      string  `json:"name"`
+
 	Email     string  `json:"email"`
 	Password  string  `json:"password"`
 	Username  string  `json:"username"`
@@ -155,37 +158,37 @@ func CORSPreflightMiddleware() gin.HandlerFunc {
 	}
 }
 
-func AuthMiddleware() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		header := c.Request.Header.Get("Authorization")
-		header = header[len("Bearer "):]
-		token, err := jwt.Parse(header, func(t *jwt.Token) (interface{}, error) {
-			return []byte("passwordBuatSigning"), nil
-		})
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{
-				"success": false,
-				"message": "JWT validation error.",
-				"error":   err.Error(),
-			})
-			c.Abort()
-			return
-		}
-		if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
-			c.Set("id", claims["id"])
-			c.Next()
-			return
-		} else {
-			c.JSON(http.StatusForbidden, gin.H{
-				"success": false,
-				"message": "JWT invalid.",
-				"error":   err.Error(),
-			})
-			c.Abort()
-			return
-		}
-	}
-}
+// func AuthMiddleware() gin.HandlerFunc {
+// 	return func(c *gin.Context) {
+// 		header := c.Request.Header.Get("Authorization")
+// 		header = header[len("Bearer "):]
+// 		token, err := jwt.Parse(header, func(t *jwt.Token) (interface{}, error) {
+// 			return []byte("passwordBuatSigning"), nil
+// 		})
+// 		if err != nil {
+// 			c.JSON(http.StatusBadRequest, gin.H{
+// 				"success": false,
+// 				"message": "JWT validation error.",
+// 				"error":   err.Error(),
+// 			})
+// 			c.Abort()
+// 			return
+// 		}
+// 		if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
+// 			c.Set("id", claims["id"])
+// 			c.Next()
+// 			return
+// 		} else {
+// 			c.JSON(http.StatusForbidden, gin.H{
+// 				"success": false,
+// 				"message": "JWT invalid.",
+// 				"error":   err.Error(),
+// 			})
+// 			c.Abort()
+// 			return
+// 		}
+// 	}
+// }
 
 func InitRouter() {
 	r.POST("/user/register", func(c *gin.Context) {
@@ -275,7 +278,8 @@ func InitRouter() {
 		}
 	})
 
-	r.GET("/user", AuthMiddleware(), func(c *gin.Context) {
+	r.GET("/user", authmiddleware.AuthMiddleware(), func(c *gin.Context) {
+	
 		id, _ := c.Get("id")
 		user := User{}
 		if result := db.Where("id = ?", id).Preload("Biodata").Take(&user); result.Error != nil {
@@ -706,7 +710,7 @@ func InitRouter() {
 	})
 
 	r.Static("/assets", "./assets")
-	r.POST("/upload", AuthMiddleware(), func(c *gin.Context) {
+	r.POST("/upload", authmiddleware.AuthMiddleware(), func(c *gin.Context) {
 		//Upload file
 		file, err := c.FormFile("file")
 		if err != nil {
@@ -720,7 +724,7 @@ func InitRouter() {
 		c.JSON(http.StatusOK, fmt.Sprintf("File %s uploaded successfully", "./assets/"+file.Filename))
 	})
 
-	r.POST("/order/date", AuthMiddleware(), func(c *gin.Context) {
+	r.POST("/order/date", authmiddleware.AuthMiddleware(), func(c *gin.Context) {
 		var body postTransactionBody
 		if err := c.BindJSON(&body); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{
@@ -752,7 +756,7 @@ func InitRouter() {
 
 	})
 
-	r.POST("/order/time", AuthMiddleware(), func(c *gin.Context) {
+	r.POST("/order/time", authmiddleware.AuthMiddleware(), func(c *gin.Context) {
 		var body postTransactionBody
 		if err := c.BindJSON(&body); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{

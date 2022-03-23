@@ -2,7 +2,7 @@ package main
 
 import (
 	"main.go/authmiddleware"
-	"main.go/struct"
+	"main.go/user"
 	"fmt"
 	"net/http"
 	"strconv"

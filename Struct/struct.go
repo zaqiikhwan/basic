@@ -1,4 +1,4 @@
-package user
+package Struct
 
 type User struct {
 	ID uint `gorm:"primarykey" json:"id"`

@@ -2,6 +2,7 @@ package main
 
 import (
 	"main.go/authmiddleware"
+	"main.go/user"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -14,26 +15,6 @@ import (
 	"gorm.io/gorm"
 )
 
-type User struct {
-	ID uint `gorm:"primarykey" json:"id"`
-	// gorm.Model
-	Name      string  `json:"name"`
-
-	Email     string  `json:"email"`
-	Password  string  `json:"password"`
-	Username  string  `json:"username"`
-	Biodata   Biodata `json:"biodata"`
-	BiodataID uint
-}
-
-type Biodata struct {
-	ID            uint   `gorm:"primarykey" json:"id"`
-	Nama_Hewan    string `json:"nama_hewan"`
-	Umur_Hewan    string `json:"umur_hewan"`
-	Jenis_Kelamin string `json:"jenis_kelamin"`
-	Jenis_Hewan   string `json:"jenis_hewan"`
-	Warna_Hewan   string `json:"warna_hewan"`
-}
 
 type postBiodataBody struct {
 	Nama_Hewan    string `json:"nama_hewan"`
@@ -129,7 +110,7 @@ func InitDB() error {
 		return err
 	}
 	db = _db
-	err = db.AutoMigrate(&User{}, &Biodata{}, &Doctor{}, &Transaction{})
+	err = db.AutoMigrate(&user.User{}, &user.Biodata{}, &Doctor{}, &Transaction{})
 	if err != nil {
 		return err
 	}
@@ -201,7 +182,7 @@ func InitRouter() {
 			})
 			return
 		}
-		user := User{
+		user := user.User{
 			Name:      body.Name,
 			Email:     body.Email,
 			Password:  body.Password,
@@ -235,7 +216,7 @@ func InitRouter() {
 			})
 			return
 		}
-		user := User{}
+		user := user.User{}
 		if result := db.Where("email = ? ", body.Email).Take(&user); result.Error != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"success": false,
@@ -281,7 +262,7 @@ func InitRouter() {
 	r.GET("/user", authmiddleware.AuthMiddleware(), func(c *gin.Context) {
 	
 		id, _ := c.Get("id")
-		user := User{}
+		user := user.User{}
 		if result := db.Where("id = ?", id).Preload("Biodata").Take(&user); result.Error != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"success": false,
@@ -324,7 +305,7 @@ func InitRouter() {
 			})
 			return
 		}
-		user := User{}
+		user := user.User{}
 		if result := db.Where("id = ?", id).Take(&user); result.Error != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"success": false,
@@ -367,7 +348,7 @@ func InitRouter() {
 			})
 			return
 		}
-		user := User{
+		user := user.User{
 			ID:       uint(parsedId),
 			Name:     body.Name,
 			Email:    body.Email,
@@ -417,7 +398,7 @@ func InitRouter() {
 			return
 		}
 
-		var queryResults []User
+		var queryResults []user.User
 		trx := db
 		if isNameExists {
 			trx = trx.Where("name LIKE ?", "%"+name+"%")
@@ -469,7 +450,7 @@ func InitRouter() {
 			})
 			return
 		}
-		user := User{
+		user := user.User{
 			ID: uint(parsedId),
 		}
 		if result := db.Delete(&user); result.Error != nil {
@@ -652,7 +633,7 @@ func InitRouter() {
 			return
 		}
 		id, _ := c.Get("id")
-		biodata := Biodata{
+		biodata := user.Biodata{
 			Nama_Hewan:    body.Nama_Hewan,
 			Umur_Hewan:    body.Umur_Hewan,
 			Jenis_Kelamin: body.Jenis_Kelamin,
@@ -667,7 +648,7 @@ func InitRouter() {
 			})
 			return
 		}
-		if result := db.Model(&User{}).Where("id = ?", id).Update("biodata_id", biodata.ID); result.Error != nil {
+		if result := db.Model(&user.User{}).Where("id = ?", id).Update("biodata_id", biodata.ID); result.Error != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"success": false,
 				"message": "Error when inserting into the database.",

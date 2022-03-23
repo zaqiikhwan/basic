@@ -79,8 +79,6 @@ type Transaction struct {
 	Tanggal_Pemesanan string `gorm:"tanggal_pemesanan" json:"tgl_pesan"`
 	Jam_Konsultasi    string `gorm:"jam_konsultasi" json:"jam_konsultasi"`
 	Bukti_Pembayaran  string `gorm:"bukti_pembayaran" json:"bukti_pembayaran"`
-	// Doctor Doctor
-	// DoctorID uint
 }
 
 type postTransactionBody struct {
@@ -138,38 +136,6 @@ func CORSPreflightMiddleware() gin.HandlerFunc {
 		}
 	}
 }
-
-// func AuthMiddleware() gin.HandlerFunc {
-// 	return func(c *gin.Context) {
-// 		header := c.Request.Header.Get("Authorization")
-// 		header = header[len("Bearer "):]
-// 		token, err := jwt.Parse(header, func(t *jwt.Token) (interface{}, error) {
-// 			return []byte("passwordBuatSigning"), nil
-// 		})
-// 		if err != nil {
-// 			c.JSON(http.StatusBadRequest, gin.H{
-// 				"success": false,
-// 				"message": "JWT validation error.",
-// 				"error":   err.Error(),
-// 			})
-// 			c.Abort()
-// 			return
-// 		}
-// 		if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
-// 			c.Set("id", claims["id"])
-// 			c.Next()
-// 			return
-// 		} else {
-// 			c.JSON(http.StatusForbidden, gin.H{
-// 				"success": false,
-// 				"message": "JWT invalid.",
-// 				"error":   err.Error(),
-// 			})
-// 			c.Abort()
-// 			return
-// 		}
-// 	}
-// }
 
 func InitRouter() {
 	r.POST("/user/register", func(c *gin.Context) {

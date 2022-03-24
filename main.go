@@ -3,6 +3,7 @@ package main
 import (
 	"main.go/authmiddleware"
 	"main.go/Struct"
+	"main.go/corspreflight"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -38,23 +39,7 @@ func InitDB() error {
 
 func InitGin() {
 	r = gin.Default()
-	r.Use(CORSPreflightMiddleware())
-}
-
-func CORSPreflightMiddleware() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
-		c.Writer.Header().Set("Access-Control-Max-Age", "86400")
-		c.Writer.Header().Set("Access-Control-Allow-Methods", "*")
-		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, authorization, accept, origin, Cache-Control, X-Requested-With")
-		c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
-		if c.Request.Method == "OPTIONS" {
-			c.Writer.Header().Set("Content-Type", "application/json")
-			c.AbortWithStatus(204)
-		} else {
-			c.Next()
-		}
-	}
+	r.Use(corspreflight.CORSPreflightMiddleware())
 }
 
 func InitRouter() {

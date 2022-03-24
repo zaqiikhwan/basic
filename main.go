@@ -15,86 +15,6 @@ import (
 	"gorm.io/gorm"
 )
 
-
-type postBiodataBody struct {
-	Nama_Hewan    string `json:"nama_hewan"`
-	Umur_Hewan    string `json:"umur_hewan"`
-	Jenis_Kelamin string `json:"jenis_kelamin"`
-	Jenis_Hewan   string `json:"jenis_hewan"`
-	Warna_Hewan   string `json:"warna_hewan"`
-}
-type Doctor struct {
-	ID           uint   `gorm:"primarykey" json:"id"`
-	Name         string `json:"name"`
-	Email        string `json:"email"`
-	Jadwal       string `json:"jadwal"`
-	Lokasi_Kerja string `gorm:"lokasi_kerja" json:"lokasi_kerja"`
-	Meet         string `gorm:"meet" json:"meet"`
-	Picture      string `gorm:"picture" json:"picture"`
-	Pengalaman   uint   `gorm:"lama_pengalaman" json:"pengalaman"`
-	Price        string `gorm:"price" json:"price"`
-}
-
-type selectDoctor struct {
-	ID uint
-}
-type postRegisterBody struct {
-	Name     string `json:"name"`
-	Email    string `json:"email"`
-	Password string `json:"password"`
-	Username string `json:"username"`
-}
-
-type postLoginBody struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
-}
-
-type patchUserBody struct {
-	Name     string `json:"name"`
-	Email    string `json:"email"`
-	Password string `json:"password"`
-	Username string `json:"username"`
-}
-
-type Scrape struct {
-	ID               uint   `gorm:"primarykey" json:"id"`
-	Location         string `gorm:"location" json:"location"`
-	Name             string `gorm:"name" json:"name"`
-	Address          string `gorm:"address" json:"address"`
-	Phone_Number     string `gorm:"phone_number" json:"phone_number"`
-	Link_Google_Maps string `gorm:"link_google_maps" json:"link_google_maps"`
-}
-
-type Article struct {
-	ID       uint   `gorm:"primarykey" json:"id"`
-	Title    string `json:"title"`
-	Content  string `json:"content"`
-	Image    string `json:"image"`
-	Category string `json:"category"`
-}
-
-type Transaction struct {
-	ID                uint   `gorm:"primarykey" json:"id"`
-	Tanggal_Pemesanan string `gorm:"tanggal_pemesanan" json:"tgl_pesan"`
-	Jam_Konsultasi    string `gorm:"jam_konsultasi" json:"jam_konsultasi"`
-	Bukti_Pembayaran  string `gorm:"bukti_pembayaran" json:"bukti_pembayaran"`
-}
-
-type postTransactionBody struct {
-	Tanggal_Pemesanan string `gorm:"tanggal_pemesanan" json:"tgl_pesan"`
-	Jam_Konsultasi    string `gorm:"jam_konsultasi" json:"jam_konsultasi"`
-}
-
-type searchClinic struct {
-	Location string
-}
-
-type searchArticle struct {
-	ID       uint
-	Category string
-}
-
 func StartServer() error {
 	return r.Run()
 }
@@ -108,7 +28,7 @@ func InitDB() error {
 		return err
 	}
 	db = _db
-	err = db.AutoMigrate(&Struct.User{}, &Struct.Biodata{}, &Doctor{}, &Transaction{})
+	err = db.AutoMigrate(&Struct.User{}, &Struct.Biodata{}, &Struct.Doctor{}, &Struct.Transaction{})
 	if err != nil {
 		return err
 	}
@@ -139,7 +59,7 @@ func CORSPreflightMiddleware() gin.HandlerFunc {
 
 func InitRouter() {
 	r.POST("/user/register", func(c *gin.Context) {
-		var body postRegisterBody
+		var body Struct.User
 		if err := c.BindJSON(&body); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{
 				"success": false,
@@ -173,7 +93,7 @@ func InitRouter() {
 	})
 
 	r.POST("/user/login", func(c *gin.Context) {
-		var body postLoginBody
+		var body Struct.User
 		if err := c.BindJSON(&body); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{
 				"success": false,
@@ -246,7 +166,7 @@ func InitRouter() {
 	})
 
 	r.GET("/doctor", func(c *gin.Context) {
-		var doctors []Doctor
+		var doctors []Struct.Doctor
 		if result := db.Find(&doctors); result.Error != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"success": false,
@@ -296,7 +216,7 @@ func InitRouter() {
 			})
 			return
 		}
-		var body patchUserBody
+		var body Struct.User
 		if err := c.BindJSON(&body); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{
 				"success": false,
@@ -450,7 +370,7 @@ func InitRouter() {
 			})
 			return
 		}
-		doctor := Doctor{
+		doctor := Struct.Doctor{
 			ID: uint(parsedId),
 		}
 		if result := db.Delete(&doctor); result.Error != nil {
@@ -468,7 +388,7 @@ func InitRouter() {
 	})
 
 	r.GET("/clinic", func(c *gin.Context) {
-		var queryResults []Scrape
+		var queryResults []Struct.Scrape
 		trx := db
 		if result := trx.Find(&queryResults); result.Error != nil {
 			c.JSON(http.StatusBadRequest, gin.H{
@@ -487,7 +407,7 @@ func InitRouter() {
 	})
 
 	r.POST("/clinic/search", func(c *gin.Context) {
-		var body searchClinic
+		var body Struct.Scrape
 		if err := c.BindJSON(&body); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{
 				"success": false,
@@ -496,7 +416,7 @@ func InitRouter() {
 			})
 			return
 		}
-		var queryResults []Scrape
+		var queryResults []Struct.Scrape
 		trx := db
 		if result := trx.Where("Location = ?", body.Location).Find(&queryResults); result.Error != nil {
 			c.JSON(http.StatusBadRequest, gin.H{
@@ -515,7 +435,7 @@ func InitRouter() {
 	})
 
 	r.GET("/article", func(c *gin.Context) {
-		var queryResults []Article
+		var queryResults []Struct.Article
 		trx := db
 		if result := trx.Find(&queryResults); result.Error != nil {
 			c.JSON(http.StatusBadRequest, gin.H{
@@ -534,7 +454,7 @@ func InitRouter() {
 	})
 
 	r.POST("/article/search", func(c *gin.Context) {
-		var body searchArticle
+		var body Struct.Article
 		if err := c.BindJSON(&body); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{
 				"success": false,
@@ -543,7 +463,7 @@ func InitRouter() {
 			})
 			return
 		}
-		var queryResults []Article
+		var queryResults []Struct.Article
 		trx := db
 		if result := trx.Where("ID = ?", body.ID).Find(&queryResults); result.Error != nil {
 			c.JSON(http.StatusBadRequest, gin.H{
@@ -561,7 +481,7 @@ func InitRouter() {
 	})
 
 	r.POST("/article/category", func(c *gin.Context) {
-		var body searchArticle
+		var body Struct.Article
 		if err := c.BindJSON(&body); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{
 				"success": false,
@@ -570,7 +490,7 @@ func InitRouter() {
 			})
 			return
 		}
-		var queryResults []Article
+		var queryResults []Struct.Article
 		trx := db
 		if result := trx.Where("Category = ?", body.Category).Find(&queryResults); result.Error != nil {
 			c.JSON(http.StatusBadRequest, gin.H{
@@ -589,7 +509,7 @@ func InitRouter() {
 	})
 
 	r.POST("/biodata", func(c *gin.Context) {
-		var body postBiodataBody
+		var body Struct.Biodata
 		if err := c.BindJSON(&body); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{
 				"success": false,
@@ -630,7 +550,7 @@ func InitRouter() {
 	})
 
 	r.POST("/doctor/search", func(c *gin.Context) {
-		var body selectDoctor
+		var body Struct.Doctor
 		if err := c.BindJSON(&body); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{
 				"success": false,
@@ -639,7 +559,7 @@ func InitRouter() {
 			})
 			return
 		}
-		var queryResults []Doctor
+		var queryResults []Struct.Doctor
 		trx := db
 		if result := trx.Where("ID = ?", body.ID).Find(&queryResults); result.Error != nil {
 			c.JSON(http.StatusBadRequest, gin.H{
@@ -672,7 +592,7 @@ func InitRouter() {
 	})
 
 	r.POST("/order/date", authmiddleware.AuthMiddleware(), func(c *gin.Context) {
-		var body postTransactionBody
+		var body Struct.Transaction
 		if err := c.BindJSON(&body); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{
 				"success": false,
@@ -682,7 +602,7 @@ func InitRouter() {
 			return
 		}
 		fmt.Println(body.Tanggal_Pemesanan)
-		transaction := Transaction{
+		transaction := Struct.Transaction{
 			Tanggal_Pemesanan: body.Tanggal_Pemesanan,
 		}
 		if result := db.Create(&transaction); result.Error != nil {
@@ -704,7 +624,7 @@ func InitRouter() {
 	})
 
 	r.POST("/order/time", authmiddleware.AuthMiddleware(), func(c *gin.Context) {
-		var body postTransactionBody
+		var body Struct.Transaction
 		if err := c.BindJSON(&body); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{
 				"success": false,
@@ -713,7 +633,7 @@ func InitRouter() {
 			})
 			return
 		}
-		transaction := Transaction{
+		transaction := Struct.Transaction{
 			Jam_Konsultasi: body.Jam_Konsultasi,
 		}
 		if result := db.Create(&transaction); result.Error != nil {

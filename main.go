@@ -1,18 +1,18 @@
 package main
 
 import (
-	"main.go/authmiddleware"
-	"main.go/Struct"
-	"main.go/corspreflight"
 	"fmt"
 	"net/http"
 	"strconv"
 	"time"
-	
+
+	"main.go/Struct"
+	"main.go/authmiddleware"
+	"main.go/corspreflight"
+	"main.go/initdatabase"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v4"
-	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 )
 
@@ -22,20 +22,6 @@ func StartServer() error {
 
 var db *gorm.DB
 var r *gin.Engine
-
-func InitDB() error {
-	_db, err := gorm.Open(mysql.Open("root:@tcp(127.0.0.1:3306)/project_1?parseTime=true"), &gorm.Config{})
-	if err != nil {
-		return err
-	}
-	db = _db
-	err = db.AutoMigrate(&Struct.User{}, &Struct.Biodata{}, &Struct.Doctor{}, &Struct.Transaction{})
-	if err != nil {
-		return err
-	}
-	db.Exec("INSERT INTO biodata (id) VALUES (?)", 1)
-	return nil
-}
 
 func InitGin() {
 	r = gin.Default()
@@ -131,7 +117,7 @@ func InitRouter() {
 	})
 
 	r.GET("/user", authmiddleware.AuthMiddleware(), func(c *gin.Context) {
-	
+
 		id, _ := c.Get("id")
 		user := Struct.User{}
 		if result := db.Where("id = ?", id).Preload("Biodata").Take(&user); result.Error != nil {
@@ -642,7 +628,7 @@ func InitRouter() {
 }
 
 func main() {
-	if err := InitDB(); err != nil {
+	if err := initdatabase.InitDB(); err != nil {
 		fmt.Println("Database error on init!")
 		fmt.Println(err.Error())
 		return
